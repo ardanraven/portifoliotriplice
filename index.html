@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sua Galeria de Arte Digital</title>
+    <title>Galeria Triplice</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
@@ -40,6 +40,12 @@
             pointer-events: none;
             transition: transform 0.2s ease-out;
             opacity: 0;
+        }
+        /* Esconde o cursor em dispositivos de toque */
+        @media (pointer: coarse) {
+            .cursor {
+                display: none;
+            }
         }
         .cursor-dot {
             width: 6px;
@@ -431,9 +437,18 @@
             let currentScroll = 0;
             let targetScroll = 0;
             let ease = 0.075;
-            let maxScroll = scrollContainer.scrollWidth - window.innerWidth;
+            let maxScroll = 0;
+            
+            // Variáveis para o toque
+            let isDragging = false;
+            let startX;
+            let scrollLeftStart;
 
             // 3. Define as funções principais
+            function updateMaxScroll() {
+                maxScroll = scrollContainer.scrollWidth - window.innerWidth;
+            }
+
             function animateCursor() {
                 circleX += (cursorX - circleX) * 0.4;
                 circleY += (cursorY - circleY) * 0.4;
@@ -468,28 +483,48 @@
                 el.addEventListener('mouseleave', () => cursorCircle.classList.remove('hovered'));
             });
 
+            // Rolagem com o mouse
             mainContainer.addEventListener('wheel', (e) => {
                 e.preventDefault();
                 targetScroll += e.deltaY;
                 targetScroll = Math.max(0, Math.min(targetScroll, maxScroll));
             }, { passive: false });
 
-            window.addEventListener('resize', () => {
-                maxScroll = scrollContainer.scrollWidth - window.innerWidth;
+            // Rolagem com o toque (mobile)
+            mainContainer.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                startX = e.touches[0].pageX;
+                scrollLeftStart = currentScroll;
             });
+
+            mainContainer.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const walk = (e.touches[0].pageX - startX) * 2; // Multiplica para dar mais sensibilidade
+                targetScroll = scrollLeftStart - walk;
+                targetScroll = Math.max(0, Math.min(targetScroll, maxScroll));
+            });
+
+            mainContainer.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+
+            window.addEventListener('resize', updateMaxScroll);
+            window.addEventListener('load', updateMaxScroll);
 
             // 5. Executa lógicas de inicialização
             const quoteText = "A arte não reproduz o visível, mas torna visível o que nem sempre o é.";
+            quoteElement.innerHTML = ''; // Limpa o conteúdo antes de adicionar
             quoteText.split(' ').forEach((word, index) => {
                 const span = document.createElement('span');
-                span.textContent = word; // Correção: Apenas a palavra, sem espaço extra.
+                span.textContent = word;
                 span.style.transitionDelay = `${index * 0.05}s`;
                 quoteElement.appendChild(span);
-                // Adiciona um nó de texto com um espaço após cada palavra.
                 quoteElement.appendChild(document.createTextNode(' '));
             });
 
-            // 6. Inicia as animações
+            // 6. Inicia as animações e cálculos iniciais
+            updateMaxScroll();
             animateCursor();
             smoothScroll();
         });
